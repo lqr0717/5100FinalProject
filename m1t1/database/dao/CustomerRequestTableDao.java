@@ -1,9 +1,11 @@
 package m1t1.database.dao;
 
+import m1t1.database.model.CustomerInfo;
 import m1t1.database.model.CustomerRequest;
 import m1t1.database.utils.SQLUtil;
 
 import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
@@ -49,4 +51,39 @@ public class CustomerRequestTableDao {
             throw new RuntimeException(e);
         }
     }
+
+    public CustomerInfo getCustomerInfo(String phoneNumberCleaned) {
+        try {
+            if (connection.isClosed()) {
+                connection = SQLUtil.getConnection(url);
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+        CustomerInfo customerInfo = new CustomerInfo();
+        try (Statement statement = connection.createStatement()) {
+            String selectSyntax = "SELECT firstName,lastName,email FROM dbo.CustomerRequest WHERE contactNo = '" + phoneNumberCleaned + "'";
+            ResultSet customerAuto = statement.executeQuery(selectSyntax);
+            while(customerAuto.next()){
+                String fn = customerAuto.getString("firstName");
+                String ln = customerAuto.getString("lastName");
+                String em = customerAuto.getString("email");
+
+                customerInfo.setPhoneNumber(phoneNumberCleaned);
+                customerInfo.setEmail(em);
+                customerInfo.setFirstName(fn);
+                customerInfo.setLastName(ln);
+
+            }
+
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+        return customerInfo;
+    }
+
+
+
+
+
 }

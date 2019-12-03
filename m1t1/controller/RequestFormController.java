@@ -48,7 +48,7 @@ public class RequestFormController {
         }
 
         String phoneNumberCleaned = phoneNumber.trim();
-        return Optional.ofNullable(customerTableDao.getCustomerInfo(phoneNumberCleaned));
+        return Optional.ofNullable(customerRequestTableDao.getCustomerInfo(phoneNumberCleaned));
     }
 
     public void writeCustomerRequest(RequestForm requestForm) {

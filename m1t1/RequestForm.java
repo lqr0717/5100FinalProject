@@ -3,11 +3,19 @@ package m1t1;
 import m1t1.controller.RequestFormController;
 import m1t1.database.dao.CustomerTableDao;
 import m1t1.database.dao.DealerTableDao;
-import m1t1.database.dao.LeadTableDao;
+import m1t1.database.dao.CustomerRequestTableDao;
 import m1t1.database.dao.VehicleTableDao;
+import m1t1.database.model.CustomerInfo;
+import m1t1.database.model.DealerDetails;
+import m1t1.database.model.VehicleDetails;
 
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.util.Optional;
+import java.util.UUID;
 
 public class RequestForm extends JFrame{
     private static final String BLUE_CODE = "#CDE7FB";
@@ -16,13 +24,18 @@ public class RequestForm extends JFrame{
 
     private JLabel firstNameLabel, lastNameLabel, emailLabel, phoneNumLabel;
     private JTextField firstNameField, lastNameField, emailField, phoneNumField;
+    private JTextArea messageArea;
     private JButton submitButton;
 
     private RequestFormController requestFormController;
+    private VehicleDetails carDetails;
+    private DealerDetails dealerDetails;
 
-    private RequestForm(RequestFormController requestFormController, String carDetails, String dealerDetails,
+    private RequestForm(RequestFormController requestFormController, VehicleDetails carDetails, DealerDetails dealerDetails,
                         int interestedPeopleCount) {
         this.requestFormController = requestFormController;
+        this.carDetails = carDetails;
+        this.dealerDetails = dealerDetails;
 
         firstNameLabel = createJLabel("First Name  ", BLACK_CODE);
         setBoldFont(firstNameLabel);
@@ -84,7 +97,9 @@ public class RequestForm extends JFrame{
         informationPanel.add(carDetailsTitle);
 
         JTextArea carDetailsField = new JTextArea(5, 36);
-        carDetailsField.setText(carDetails);
+        if (carDetails != null) {
+            carDetailsField.setText(carDetails.getDetails());
+        }
         carDetailsField.setEditable(false);
         JPanel carDetailsFieldPanel = new JPanel();
         carDetailsFieldPanel.setBackground(Color.decode(BLUE_CODE));
@@ -99,7 +114,9 @@ public class RequestForm extends JFrame{
         informationPanel.add(dealerInfoLabelPanel);
 
         JTextArea dealerDetailsField = new JTextArea(5, 36);
-        dealerDetailsField.setText(dealerDetails);
+        if (dealerDetails != null) {
+            dealerDetailsField.setText(dealerDetails.getDetails());
+        }
         dealerDetailsField.setEditable(false);
         JPanel dealerDetailsFieldPanel = new JPanel();
         dealerDetailsFieldPanel.setBackground(Color.decode(BLUE_CODE));
@@ -121,7 +138,7 @@ public class RequestForm extends JFrame{
         messageLabelPanel.add(messageLabel);
         messagePanel.add(messageLabelPanel);
 
-        JTextArea messageArea = new JTextArea(10, 36);
+        messageArea = new JTextArea(10, 36);
         JPanel messageAreaPanel = new JPanel();
         messageAreaPanel.setBackground(Color.decode(BLUE_CODE));
         messageAreaPanel.add(messageArea);
@@ -136,6 +153,72 @@ public class RequestForm extends JFrame{
         submitButtonPanel.setBackground(Color.decode(BLUE_CODE));
         submitButtonPanel.add(submitButton);
         con.add(submitButtonPanel);
+
+        submitButton.addActionListener((ActionEvent ae) -> {
+            writeToTable();
+            System.exit(0);
+        });
+
+        phoneNumField.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                searchAndFillCustomerInfo();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                searchAndFillCustomerInfo();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                searchAndFillCustomerInfo();
+            }
+        });
+
+    }
+
+    public VehicleDetails getCarDetails() {
+        return carDetails;
+    }
+
+    public DealerDetails getDealerDetails() {
+        return dealerDetails;
+    }
+
+    public JTextField getFirstNameField() {
+        return firstNameField;
+    }
+
+    public JTextField getLastNameField() {
+        return lastNameField;
+    }
+
+    public JTextField getEmailField() {
+        return emailField;
+    }
+
+    public JTextField getPhoneNumField() {
+        return phoneNumField;
+    }
+
+    public JTextArea getMessageArea() {
+        return messageArea;
+    }
+
+    private void writeToTable(){
+        requestFormController.writeCustomerRequest(this);
+    }
+
+    private void searchAndFillCustomerInfo() {
+        String phoneNumber = phoneNumField.getText();
+        Optional<CustomerInfo> customerInfo = requestFormController.getCustomerInfo(phoneNumber);
+
+        if (customerInfo.isPresent()) {
+            emailField.setText(customerInfo.get().getEmail());
+            firstNameField.setText(customerInfo.get().getFirstName());
+            lastNameField.setText(customerInfo.get().getLastName());
+        }
     }
 
     private JLabel createJLabel(String text, String colorCode) {
@@ -149,17 +232,17 @@ public class RequestForm extends JFrame{
     }
 
     public static class RequestFormBuilder {
-        private String carDetails;
-        private String dealerDetails;
+        private VehicleDetails carDetails;
+        private DealerDetails dealerDetails;
         private int interestedPeopleCount;
         private RequestFormController requestFormController;
 
-        public RequestFormBuilder withCarDetails(String carDetails) {
+        public RequestFormBuilder withCarDetails(VehicleDetails carDetails) {
             this.carDetails = carDetails;
             return this;
         }
 
-        public RequestFormBuilder withDealerDetails(String dealerDetails) {
+        public RequestFormBuilder withDealerDetails(DealerDetails dealerDetails) {
             this.dealerDetails = dealerDetails;
             return this;
         }
@@ -180,9 +263,13 @@ public class RequestForm extends JFrame{
     }
 
     public static void main(String[] args) {
-        RequestFormController controller = new RequestFormController(new VehicleTableDao(), new DealerTableDao(),
-                new CustomerTableDao(), new LeadTableDao());
-        JFrame f = controller.createRequestForm("aaaaa", "bbbbb");
+        String sqlUrl = "jdbc:sqlserver://is-swang01.ischool.uw.edu:1433;databaseName=VechileManagementSystem;user=INFO6210;password=NEUHusky!";
+        String carTableName = "CarInventory";
+        String customerRequestTableName = "CustomerRequest";
+
+        RequestFormController controller = new RequestFormController(new VehicleTableDao(sqlUrl, carTableName), new DealerTableDao(),
+                new CustomerTableDao(), new CustomerRequestTableDao(sqlUrl, customerRequestTableName));
+        JFrame f = controller.createRequestForm("SED2018001", "bbbbb");
         f.setTitle("Customer Request Form");
         f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         f.setSize(600, 600);
